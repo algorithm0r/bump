@@ -1,0 +1,50 @@
+#gameWorld {
+    border: 1px solid black;
+    background-color: white;
+    float: left;
+    display:inline-block;
+}
+
+.button {
+    border: 2px solid #03ecd3;
+    margin: auto;
+    padding-top: 12px;
+    height: 36px;
+    width: 100px;
+    font-family:Arial;
+    color: white;
+    background-color: blue;
+    display:inline-block;
+    text-align:center;
+}
+
+p {
+    margin: 4px;
+    font-size:20px;
+}
+
+#environment {
+    width: 240px;
+    border: 2px solid brown;
+    margin: auto;
+    font-family: Arial;
+    color: brown;
+    background-color: sandybrown;
+    display:inline-block;
+    text-align:left;
+}
+
+div input {
+    width: 50px;
+}
+
+#agent {
+    width: 240px;
+    border: 2px solid darkgreen;
+    margin: auto;
+    font-family: Arial;
+    color: green;
+    background-color: lightgreen;
+    display:inline-block;
+    text-align:left;
+}
