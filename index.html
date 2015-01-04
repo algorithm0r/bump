@@ -15,6 +15,7 @@
         <input type="text" id="numsites" value="100"/>Gathering Sites<br />
         <input type="text" id="reach" value="0.2"/>Edge Reach<br />
         <input type="text" id="permsize" value="5"/>Permutation Size<br />
+        <input type="text" id="rewardmin" value="1"/>Minimum Reward<br />
         <input type="text" id="rewardmax" value="3"/>Maximum Reward<br />
         <input type="text" id="yield" value="25"/>Yield<br />
         <input type="text" id="maxenergy" value="50"/>Daily Time Units<br />
@@ -24,14 +25,17 @@
         <input type="text" id="resourcefactor" value="2"/>Energy per Resource<br />
         <input type="text" id="restcost" value="0.01"/>Energy Cost for Resting<br />
         <input type="text" id="agecost" value="0.00025"/>Energy Cost for Age<br />
-        <input type="text" id="asexual" value="25"/>Initial Asexual Threshold<br />
+        <input type="text" id="asexual" value="50"/>Initial Asexual Threshold<br />
         <input type="text" id="sexual" value="25"/>Initial Sexual Threshold<br />
         <input type="text" id="mutationlength" value="20"/>Mutate Length<br />
         <input type="text" id="mutationrate" value="0.05"/>Mutation Rate<br />
+        <input type="checkbox" id="asexualon" checked=true />Asexual <br/>
+        <input type="checkbox" id="sexualon" checked=true />Sexual <br/>
+        <input type="checkbox" id="maximize" checked=true />Maximize Day<br/>
+        <input type="checkbox" id="continue" checked=true />Continue Day<br/>
     </div><br />
     <input type="range" id="speed" min="1" max="250" value="100" step="1"/>Speed<br />
-    <input type="checkbox" id="asexualon" checked=true />Asexual <input type="checkbox" id="sexualon" checked=true />Sexual <br/>
-    <input type="checkbox" id="clusters" checked=true />Clusters    <input type="text" id="clusterthreshold" value="10"/><br />
+<!--    <input type="checkbox" id="clusters" />Clusters    <input type="text" id="clusterthreshold" value="10"/><br />-->
     <div class="button" id="play">Play/Pause</div>
     <div class="button" id="restart">Restart</div>
 </body>

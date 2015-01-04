@@ -43,7 +43,7 @@ AssetManager.prototype.downloadAll = function (callback) {
     }
 }
 
-AssetManager.prototype.getAsset = function(path){
+AssetManager.prototype.getAsset = function (path) {
     //console.log(path.toString());
     return this.cache[path];
 }
@@ -235,95 +235,11 @@ Renderer.prototype = new Entity();
 Renderer.prototype.constructor = Renderer;
 
 Renderer.prototype.update = function () {
-    var numAgents = 20;
+    var numAgents = 36;
 
     if (!this.p.params.pause) {
         this.p.update();
-        Entity.prototype.update.call(this);
-
-        for (var i = 0; i < this.agents.length; i++) {
-            if (this.agents[i] === null || this.agents[i].energy < 0 || this.agents[i].dead === true) {
-                //console.log(this.agents[i]);
-                if (this.p.params.clusters) {
-                    this.related.splice(i, 1);
-                    for (var j = 0; j < this.related.length; j++) this.related[j].splice(i, 1);
-                }
-                this.agents.splice(i--, 1);
-            }
-        }
-        var changed = false;
-        while (this.agents.length < numAgents && this.agents.length < this.p.agents.length) {
-            var l = this.p.agents.length - 1 - Math.floor(Math.random() * this.p.agents.length / 4);
-            var newagent = this.p.agents[l];
-            this.agents.push(newagent);
-
-            if (this.p.params.clusters) {
-                this.related.push([]);
-                for (var k = 0; k < this.agents.length - 1; k++) {
-                    var value = Math.max(newagent.genome.geneplex.genes.length, this.agents[k].genome.geneplex.genes.length) - newagent.genome.geneplex.lcs(this.agents[k].genome.geneplex).max;
-                    this.related[this.related.length - 1].push(value);
-                    this.related[k].push(value);
-                }
-                this.related[this.related.length - 1].push(0);
-                changed = true;
-            }
-        }
-        if (changed) {
-            this.clusters = [];
-            for (var i = 0; i < this.agents.length; i++) {
-                var clustered = false;
-                for (var j = 0; j < this.clusters.length; j++) {
-                    var allZero = true;
-                    for (var k = 0; k < this.clusters[j].length; k++) {
-                        if (this.related[i][this.clusters[j][k]] > this.p.params.clusterthreshold) {
-                            allZero = false;
-                            break;
-                        }
-                    }
-                    if (allZero) {
-                        this.clusters[j].push(i);
-                        clustered = true;
-                        break;
-                    }
-                }
-                if (!clustered) {
-                    this.clusters.push([]);
-                    this.clusters[this.clusters.length - 1].push(i);
-                }
-            }
-            //if (this.clusters.length > 1) {
-            //console.log(this.clusters);
-            var order = [];
-            var cls = 0, itm = 0;
-            for (var i = 0; i < this.agents.length; i++) {
-                order.push(this.clusters[cls][itm]);
-                itm++;
-                if (itm >= this.clusters[cls].length) {
-                    cls++;
-                    itm = 0;
-                }
-            }
-            //if (this.clusters.length > 1) {
-            //    console.log(this.clusters);
-            //    console.log(order);
-            //}
-            var temp = [];
-            var agents = [];
-            for (var i = 0; i < this.agents.length; i++) {
-                temp.push([]);
-                var k = order[i];
-                agents.push(this.agents[k]);
-                for (var j = 0; j < this.agents.length; j++) {
-                    var l = order[j];
-                    //console.log(i + " " + j + " " + k + " " + l + " " + clsi + " " + itmi + " " + clsj + " " + itmj);
-                    if (this.related[k][l] != this.related[l][k]) console.log(l + " " + k + " " + this.related[k][l] + " " + this.related[l][k]);
-                    temp[i].push(this.related[k][l]);
-                }
-            }
-            this.related = temp;
-            this.agents = agents;
-        }
-
+        this.agents = this.p.agents.slice(0, numAgents);
     }
 }
 
@@ -349,13 +265,17 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
     }
     ctx.lineWidth = 1.0;
 
+    var sites = [];
+    for (var i = 0; i < this.map.sitelist.length; i++) sites.push(0);
+
+    for (var i = 0; i < this.p.agents.length; i++) {
+        sites[this.p.agents[i].site]++;
+    }
+
     for (var i = 0; i < this.map.sitelist.length; i++) {
         var site = this.map.sitelist[i];
         ctx.beginPath();
-        var rad = 2;
-        for (var j = 0; j < this.p.agents.length; j++) {
-            if (this.p.agents[j].site === i) rad += 2;
-        }
+        var rad = Math.max(2, Math.min(2 * (1 + sites[i]), 50));
         ctx.arc(w * site.x + x, h * site.y + y, rad, 0, 2 * Math.PI, false);
         var dist = Math.sqrt(site.x * site.x + site.y * site.y) / Math.sqrt(2);
         var red = Math.floor((dist - 0.5) * 2 * 255);
@@ -371,6 +291,22 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
         ctx.strokeStyle = "Black";
         ctx.stroke();
     }
+
+    ctx.font = "18px Arial";
+    ctx.fillStyle = "black";
+    ctx.fillText("Population " + this.p.agents.length, x, y + 1.1*h + 20);
+    ctx.fillText("Length (Max/Ave/Min) " + Math.floor(this.p.lengths.max) + "/" + Math.floor(this.p.lengths.average) + "/" + Math.floor(this.p.lengths.min), x, y + 1.1 * h + 40);
+//    ctx.fillText("Ratio (Max/Ave/Min) " + Math.floor(this.p.ratio.max * 100) / 100 + "/" + Math.floor(this.p.ratio.average * 100) / 100 + "/" + Math.floor(this.p.ratio.min * 100) / 100, x, y + 1.1 * h + 60);
+
+    ctx.beginPath();
+    ctx.fillStyle = "Red";
+    ctx.rect(x + offset, y + 1.1 * h, this.p.dayasex / this.p.params.numsites * w, 8);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    ctx.rect(x + offset, y + 1.1 * h, this.p.slept / this.p.params.numsites * w, 8);
+    ctx.stroke();
 
     var offset = 1.1 * w;
 
@@ -409,11 +345,35 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
         ctx.globalAlpha = 1.0;
 
         ctx.beginPath();
-        rad = (site.slept) * scale /2;
+        rad = (site.slept) * scale / 2;
         ctx.arc(offset + w * site.x + x, h * site.y + y, rad, 0, 2 * Math.PI, false);
         ctx.strokeStyle = "Grey";
         ctx.stroke();
     }
+
+    ctx.beginPath();
+    ctx.fillStyle = "Blue";
+    ctx.rect(x + offset, y + 1.1 * h, this.p.dayasex / this.p.params.numsites * w, 8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    ctx.rect(x + offset, y + 1.1*h, this.p.slept / this.p.params.numsites * w, 8);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "Red";
+    ctx.rect(x + offset, y + 1.1 * h + 10, this.p.daysex / this.p.params.numsites * w, 8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    ctx.rect(x + offset, y + 1.1 * h + 10, this.p.harvest / this.p.params.numsites * w, 8);
+    ctx.stroke();
+
+    ctx.fillStyle = "black";
+    ctx.fillText("Births(Asex/Sex) " + this.p.births + "/" + this.p.sexbirths, x + 1.1 * w, y + 1.1 * h + 40);
+    ctx.fillText("Generation (Max/Min) " + this.p.gen.max + "/" + this.p.gen.min, x + 1.1 * w, y + 1.1 * h + 60);
+
+
     // gathering map
     offset = 2.2 * w;
     ctx.lineWidth = 0.5;
@@ -426,7 +386,7 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
                 var color = 192 - 8 * this.map.visited[i][j];
                 if (this.map.visited[i][j] === 0) color = 232;
                 if (color < 0) color = 0;
-                ctx.strokeStyle = "rgb(" + color + "," + color + "," + color + ")";;
+                ctx.strokeStyle = "rgb(" + color + "," + color + "," + color + ")";
                 ctx.beginPath();
                 ctx.moveTo(offset + w * site1.x + x, h * site1.y + y);
                 ctx.lineTo(offset + w * site2.x + x, h * site2.y + y);
@@ -440,7 +400,7 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
         var site = this.map.sitelist[i];
         ctx.beginPath();
         ctx.globalAlpha = 0.3;
-        var rad = (site.count) * scale;
+        var rad = (site.feedcount) * scale;
         while (rad > 10) {
             ctx.arc(offset + w * site.x + x, h * site.y + y, 10, 0, 2 * Math.PI, false);
             ctx.fillStyle = "Green";
@@ -468,17 +428,39 @@ Renderer.prototype.drawSiteMap = function (ctx, map, x, y, w, h) {
         ctx.fill();
         ctx.globalAlpha = 1.0;
     }
+
+    ctx.beginPath();
+    ctx.fillStyle = "Green";
+    ctx.rect(x + offset, y + 1.1 * h, this.p.harvest / this.p.params.numsites * w, 8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = "Black";
+    ctx.rect(x + offset, y + 1.1 * h, this.p.overharvest / this.p.params.numsites * w, 8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    ctx.rect(x + offset, y + 1.1 * h, w, 8);
+    ctx.stroke();
+
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "black";
+    ctx.fillText("Population", x + 0.3*w, y-4);
+    ctx.fillText("Breeding", x + 1.4*w, y-4);
+    ctx.fillText("Feeding", x + 2.5*w, y-4);
+
 }
 
-Renderer.prototype.drawGeneplex = function (ctx, gp, x, y) {
-    var offset = 0;
+Renderer.prototype.drawGeneplex = function (ctx, gp, x, y, genescale, vert) {
+    var xoffset = 0;
+    var yoffset = 0;
+    var visualLength = 560;
     //console.log(gp.genes[0].cost());
-    for (var j = 0; j < gp.genes.length && offset < 1200; j++) {
+    for (var j = 0; j < gp.genes.length && xoffset < visualLength && yoffset < visualLength; j++) {
         ctx.beginPath();
         //if (gp.genes[j] === null) console.log(j);
         var site = gp.genes[j].site;
         var dist = Math.sqrt(site.x * site.x + site.y * site.y) / Math.sqrt(2);
-        var red = Math.floor((dist-0.5) * 2 * 255);
+        var red = Math.floor((dist - 0.5) * 2 * 255);
         var green = Math.floor((dist - 0.5) * 2 * 255);
         var blue = Math.floor(255);
         if (red < 0) {
@@ -487,26 +469,31 @@ Renderer.prototype.drawGeneplex = function (ctx, gp, x, y) {
             blue = Math.floor(dist * 2 * 255);
         }
         ctx.strokeStyle = j === gp.gene ? "Red" : "rgb(" + red + "," + green + "," + blue + ")";
-        ctx.rect(x + offset, y, 3 * gp.genes[j].cost(), 5);
+        var width = genescale * gp.genes[j].cost();
+        var height = genescale * 2;
+        ctx.rect(x + xoffset, y + yoffset, vert ? height : width , vert ? width : height);
         //console.log("Gene " + j + " Cost " + gp.genes[j].cost() + " Game " + gp.genes[j].minigame.perm.perm + " Attempt " + gp.genes[j].perm.perm);
-        if (offset > 900) ctx.globalAlpha = 1.0 - (offset - 900) / 300;
+        if (!vert && xoffset > visualLength/2) ctx.globalAlpha = 1.0 - (xoffset - visualLength/2) / (visualLength / 2);
+        if (vert && yoffset > visualLength/2) ctx.globalAlpha = 1.0 - (yoffset - visualLength/2) / (visualLength / 2);
         ctx.stroke();
-        offset += 3 * gp.genes[j].cost() + 1;
+        vert ? yoffset += width + 1 : xoffset += width + 1;
 
         if (gp.genes[j].breed + gp.breedsites[gp.genes[j].site.index] > 0) {
             ctx.beginPath();
             ctx.strokeStyle = "Green";
-            ctx.rect(x + offset, y, Math.max(3 * gp.genes[j].breed + gp.breedsites[gp.genes[j].site.index], 1), 5);
+            width = Math.max(genescale * (gp.genes[j].breed + gp.breedsites[gp.genes[j].site.index]), 1);
+            ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
             ctx.stroke();
-            offset += Math.max(3 * gp.genes[j].breed + gp.breedsites[gp.genes[j].site.index], 1) + 1;
+            vert ? yoffset += width + 1 : xoffset += width + 1;
         }
 
-        if(j != gp.genes.length - 1) {
+        if (j != gp.genes.length - 1) {
             ctx.beginPath();
-            ctx.fillStyle = "Black";
-            ctx.rect(x + offset, y, 3 * this.p.params.map.adjacencymatrix[gp.genes[j].site.index][gp.genes[j+1].site.index], 5);
-            ctx.fill();
-            offset += 3 * this.p.params.map.adjacencymatrix[gp.genes[j].site.index][gp.genes[j+1].site.index];
+            ctx.strokeStyle = "Black";
+            width = genescale * this.p.params.map.adjacencymatrix[gp.genes[j].site.index][gp.genes[j + 1].site.index];
+            ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+            ctx.stroke();
+            vert ? yoffset += width + 1 : xoffset += width + 1;
         }
         ctx.globalAlpha = 1.0;
 
@@ -517,8 +504,98 @@ Renderer.prototype.drawGenome = function (ctx, genome, x, y) {
 
 }
 
-Renderer.prototype.drawAgent = function (ctx, agent, x, y) {
-    this.drawGeneplex(ctx, agent.genome.geneplex, x, y);
+Renderer.prototype.drawAgent = function (ctx, agent, x, y, vert) {
+    var xoffset = 0;
+    var yoffset = 0;
+    var scale = 2;
+    //this.drawGeneplex(ctx, agent.genome.geneplex, x, y, 2, vert);
+
+    ctx.beginPath();
+    ctx.fillStyle = "LightGrey";
+    ctx.strokeStyle = "DarkGrey";
+    var width = agent.genome.geneplex.length * scale / 2;
+    var height = 25;
+    ctx.rect(x + xoffset - 2, y + yoffset - 2, (vert ? height : width) + 4, (vert ? width : height) + 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "Brown";
+    width = agent.genome.geneplex.resourcesRatio * this.p.params.resourcefactor * scale * 100;
+    height = 4;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    width = 100 * scale;
+    height = 4;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.stroke();
+
+    vert ? xoffset = 7 : yoffset = 7;
+
+    ctx.beginPath();
+    ctx.fillStyle = "Blue";
+    ctx.strokeStyle = "Black";
+    var width = agent.age * scale;
+    var height = 4;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.fill();
+    ctx.stroke();
+
+    vert ? xoffset = 15 : yoffset = 15;
+
+    ctx.beginPath();
+    ctx.fillStyle = "Green";
+    width = agent.energy * scale;
+    height = 2;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.fill();
+
+    vert ? xoffset-- : yoffset--;
+
+    ctx.beginPath();
+    ctx.strokeStyle = "Black";
+    width = this.p.params.maxenergy * scale;
+    height = 4;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = "Red";
+    width = agent.genome.sexual * scale;
+    vert ? yoffset = this.p.params.maxenergy * scale : xoffset = this.p.params.maxenergy * scale;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = "Blue";
+    width = agent.genome.asexual * scale;
+    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+    ctx.stroke();
+
+    vert ? xoffset = 21 : yoffset = 21;
+
+    for (var i = 0; i < agent.children.length; i++) {
+        ctx.beginPath();
+        var val = agent.children[i];
+        if (val >= 0) {
+            var red = Math.floor(255);
+            var green = Math.floor(val * 5);
+            var blue = Math.floor(val * 5);
+            ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
+        }
+        else
+            ctx.fillStyle = "Blue";
+
+        ctx.strokeStyle = "Black";
+        vert ? yoffset = i * 20 : xoffset = i * 20;
+        width = 20;
+        ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+        ctx.fill();
+        ctx.stroke();
+    }
 }
 
 Renderer.prototype.drawPop = function (ctx, pop, index, x, y) {
@@ -527,19 +604,19 @@ Renderer.prototype.drawPop = function (ctx, pop, index, x, y) {
 
 Renderer.prototype.drawSun = function (ctx, x, y, radius) {
     ctx.beginPath();
-    var rad = radius/5;
+    var rad = radius / 5;
     var elapsed = this.p.elapsed / this.p.params.maxenergy;
     var xx = Math.cos(elapsed * 2 * Math.PI) * radius;
     var yy = Math.sin(elapsed * 2 * Math.PI) * radius;
-    ctx.arc(x+ xx, y+yy, rad, 0, 2 * Math.PI, false);
+    ctx.arc(x + xx, y + yy, rad, 0, 2 * Math.PI, false);
     ctx.fillStyle = "Yellow";
     ctx.fill();
     ctx.font = "20px Arial";
     ctx.fillStyle = "black";
-    ctx.fillText(this.p.days, x+6*radius/5, y+10);
+    ctx.fillText("Day " + this.p.days, x + 6 * radius / 5, y + 10);
 }
 
-Renderer.prototype.drawPlot = function (ctx, x, y, lists, scale) {
+Renderer.prototype.drawHeatPlot = function (ctx, x, y, lists, scale) {
     for (var i = 0; i < lists.length; i++) {
         var list = lists[i];
         for (var j = 0; j < list.length; j++) {
@@ -560,198 +637,67 @@ Renderer.prototype.drawPlot = function (ctx, x, y, lists, scale) {
     }
 }
 
-Renderer.prototype.draw = function (ctx) {
-    var that = this;
-    for (var i = 0; i < this.p.ages.length; i++) {
-        if (this.p.ages[i + 1] > 0) {
-            ctx.beginPath();
-            var red = Math.floor(255);
-            var green = Math.floor(192 - this.p.ages[i + 1] * 8);
-            var blue = Math.floor(192 - this.p.ages[i + 1] * 8);
-            ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
-            ctx.rect(10 + 8 * i, 10, 8, 8);
-            ctx.fill();
-        }
-    }
-    for (var i = 0; i < 15; i++) {
-        ctx.beginPath();
-        ctx.strokeStyle = "Black";
-        ctx.rect(10 + 80 * i, 10, 80, 8);
-        ctx.stroke();
-    }
-    var scale = 8/Math.ceil(this.p.agents.length/146);
-    for (var i = 0; i < this.p.agents.length; i++) {
-        //ctx.beginPath();
-        //ctx.fillStyle = this.p.agents[this.p.agents.length - 1 - i].lovechild ? "Red" : "Blue";
-        //ctx.rect(10 + 4 * i, 22, 4, 8);
-        //ctx.fill();
-        var agent = this.p.agents[this.p.agents.length - 1 - i];
-        ctx.beginPath();
-        if (agent.lovechild) {
-            var red = Math.floor(255);
-            var green = Math.floor(agent.parentrelated * 5);
-            var blue = Math.floor(agent.parentrelated * 5);
-            ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
-        }
-        else
-            ctx.fillStyle = agent.mutated ? "Black" : "Blue";
-        ctx.rect(10 + scale * i, 22, scale, 8);
-        ctx.fill();
-
-        ctx.beginPath();
-        if (agent.genome.asexual > agent.genome.sexual) {
-            var dif = agent.genome.asexual - agent.genome.sexual;
-            var red = Math.floor(255);
-            var green = Math.floor(255 - dif * 5);
-            var blue = Math.floor(255 - dif * 5);
-            ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
-        }
-        else {
-            var dif = agent.genome.sexual - agent.genome.asexual;
-            var blue = Math.floor(255);
-            var green = Math.floor(255 - dif * 5);
-            var red = Math.floor(255 - dif * 5);
-            ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
-        }
-        ctx.rect(10 + scale * i, 34, scale, 8);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.globalAlpha = 0.1;
-        for (var j = 0; j < agent.births; j++) {
-            ctx.fillStyle = "Blue";
-            ctx.rect(10 + scale * i, 46, scale, 8);
-            ctx.fill();
-        }
-        for (var j = 0; j < agent.sexbirths; j++) {
-            ctx.fillStyle = "Red";
-            ctx.rect(10 + scale * i, 46, scale, 8);
-            ctx.fill();
-        }
-        ctx.globalAlpha = 1.0;
-
-        ctx.beginPath();
-
-        var green = Math.floor(255);
-        var blue = Math.floor(255 - agent.energy * 3);
-        var red = Math.floor(255 - agent.energy * 3);
-        ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
-
-        ctx.rect(10 + scale * i, 58, scale, 8);
-        ctx.fill();
-    }
-    this.drawSiteMap(ctx, this.map, 0, 100, 300, 300);
-    this.drawSun(ctx, 1030, 210, 40);
+Renderer.prototype.drawLogPlot = function (ctx, x,y,label, series, base) {
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    ctx.fillText(label, x+100, y+11);
 
     ctx.beginPath();
-    ctx.fillStyle = "Black";
-    ctx.rect(980, 270, this.p.deaths * 2, 8);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.fillStyle = "Blue";
-    ctx.rect(980, 282, this.p.dayasex / this.p.params.numsites * 200, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.strokeStyle = "Black";
-    ctx.rect(980, 282, this.p.slept / this.p.params.numsites * 200, 8);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "Grey";
+    ctx.rect(x-2, y-2, 204, 45);
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.fillStyle = "Red";
-    ctx.rect(980, 294, this.p.daysex / this.p.params.numsites * 200, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.strokeStyle = "Black";
-    ctx.rect(980, 294, this.p.slept / this.p.params.numsites * 200, 8);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.fillStyle = "Green";
-    ctx.rect(980, 306, this.p.harvest / this.p.params.numsites * 200, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.fillStyle = "Black";
-    ctx.rect(980, 306, this.p.overharvest / this.p.params.numsites * 200, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.strokeStyle = "Black";
-    ctx.rect(980, 306, 200, 8);
-    ctx.stroke();
-
-    for (var i = 0; i < this.p.parents.length; i++) {
+    for (var i = 0; i < series.length; i++) {
         ctx.beginPath();
         ctx.fillStyle = "Red";
-        var value = this.p.parents[i];
-        value = Math.log(value)/Math.log(2)*10;
-        ctx.rect(980 + 2*i, 418, 2, -Math.min(100, value));
+        var value = series[i];
+        value = Math.log(value + 1) / Math.log(base) * 2;
+        ctx.rect(x + 2* i, y+39, 2, -value);
         ctx.fill();
-
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = "Black";
-        value -= 100;
-        if (value > 600) value = 600;
-        while (value > 0) {
-            ctx.beginPath();
-            ctx.rect(980 + 2 * i, 418, 2, -Math.min(100, value));
-            ctx.fill();
-            value -= 100;
-        }
-        ctx.globalAlpha = 1;
     }
-
     for (var i = 0; i < 10; i++) {
         ctx.beginPath();
         ctx.fillStyle = i % 2 === 0 ? "Black" : "LightGrey";
-        ctx.rect(980 + 20 * i, 418, 20, 2);
+        ctx.rect(x + 20 * i, y+39, 20, 2);
         ctx.fill();
     }
-    //this.drawPlot(ctx, 10, 600, this.p.energys);
-    //this.drawPlot(ctx, 10, 680, this.p.res);
-    if (this.p.params.clusters) {
-        this.drawPlot(ctx, 10, 600, this.related, 16);
-        var offset = 0;
-        for (var i = 0; i < this.clusters.length; i++) {
-            ctx.beginPath();
-            ctx.strokeStyle = "Red";
-            ctx.lineWidth = 2.0;
-            var step = this.clusters[i].length;
-            ctx.rect(10 + offset, 600 + offset, step * 16, step * 16);
-            ctx.stroke();
-            offset += step * 16;
-            ctx.font = "18px Arial";
-            ctx.fillStyle = "black";
-            ctx.fillText("Clusters " + this.clusters.length, 340, 620);
-        }
-    }
-    for (var i = 0; i < Math.min(this.agents.length, 72); i++) {
+}
+
+Renderer.prototype.draw = function (ctx) {
+    var that = this;
+
+    this.drawSiteMap(ctx, this.map, 10, 20, 300, 300);
+    this.drawSun(ctx, 1030, 50, 40);
+
+    this.drawLogPlot(ctx, 980, 100, "Breeding Partners", this.p.partners, 2);
+    this.drawLogPlot(ctx, 980, 150, "Breeding Sites", this.p.params.map.totalsex, 2);
+    this.drawLogPlot(ctx, 980, 200, "Parent Similarity", this.p.parents, 2);
+    this.drawLogPlot(ctx, 980, 250, "Visited Sites", this.p.params.map.totalvisited, 4);
+
+    for (var i = 0; i < Math.min(this.agents.length, 72) ; i++) {
         this.agents[i].genome.geneplex.gene = this.agents[i].gene;
-        this.drawAgent(ctx, this.agents[i], 10, 422 + i * 8);
+        var vert = true;
+        var xoffset = 0;
+        var yoffset = 0;
+        vert ? xoffset = 5 + i * 33 : yoffset = 5 + i * 33;
+        this.drawAgent(ctx, this.agents[i], 2 + xoffset, 422 + yoffset, true);
     }
-    ctx.font = "18px Arial";
-    ctx.fillStyle = "black";
-    ctx.fillText("Agents " + this.p.agents.length, 980, 100);
-    ctx.fillText("Births(A/S) " + this.p.births + "/" +this.p.sexbirths, 980, 120);
-    ctx.fillText("Gen " + this.p.gen.max + "/" + Math.floor(this.p.gen.average) + "/" + this.p.gen.min, 980, 140);
-    var a = this.p.agents[0];
-    //ctx.fillText("Age " + a.age + " Energy " + Math.floor(a.energy) + " Births(A/S) " + a.births + "/"
-    //    + a.sex + " Asexual " + a.genome.asexual + " Sexual " + a.genome.sexual, 700, 490);
-    //ctx.fillText("Resources " + this.p.resources.max + "/" + Math.floor(this.p.resources.average * 100) / 100 + "/" + this.p.resources.min + " Energy " + Math.floor(this.p.energy.max * 100) / 100 + "/" + Math.floor(this.p.energy.average * 100) / 100 + "/" + Math.floor(this.p.energy.min * 100) / 100, 700, 510);
 }
 
 // Fisher and Nutters simulation code below
 
 var contains = function (lst, obj) {
-    for (var i =0; lst != null && i < lst.length; i++){
-        if(lst[i] === obj)
+    for (var i = 0; lst != null && i < lst.length; i++) {
+        if (lst[i] === obj)
             return true;
     }
     return false;
 }
 
 var indexof = function (lst, obj) {
-    for (var i =0; lst != null && i < lst.length; i++){
-        if(lst[i] === obj)
+    for (var i = 0; lst != null && i < lst.length; i++) {
+        if (lst[i] === obj)
             return i;
     }
     return -1;
@@ -773,7 +719,7 @@ var IntervalList = function () {
 
 IntervalList.prototype.insert = function (item) {
     var i = 0;
-    while (i < this.ints.length && this.ints[i].start < item.start){
+    while (i < this.ints.length && this.ints[i].start < item.start) {
         i++;
     }
     this.ints.splice(i, 0, item);
@@ -787,7 +733,7 @@ IntervalList.prototype.findNextOverlap = function (index) {
     var i = index + 1;
     var overlaps = [];
     while (i < this.ints.length && this.ints[i].start < this.ints[index].end) {
-        if(this.ints[i].site === this.ints[index].site) overlaps.push(this.ints[i].agent);
+        if (this.ints[i].site === this.ints[index].site) overlaps.push(this.ints[i].agent);
         i++;
     }
     return overlaps;
@@ -801,7 +747,7 @@ var Perm = function (size) {
     for (var i = 0; i < this.size; i++) {
         list.push(i);
     }
-    
+
     for (var i = 0; i < this.size; i++) {
         var index = Math.floor(Math.random() * list.length);
         this.perm.push(list[index]);
@@ -815,10 +761,10 @@ Perm.prototype.compare = function (other) {
     //console.log(this.perm + " ");
     //console.log(other.perm);
     while (count < this.perm.length) {
-        if(contains(this.perm, other.perm[score]))
+        if (contains(this.perm, other.perm[score]))
             count++;
         score++;
-     }
+    }
     return score;
 }
 
@@ -851,19 +797,26 @@ var GatheringSite = function (size, reward, yield, type, index, x, y) {
     this.x = x;
     this.y = y;
 
-    this.count = 0;
+    this.feedcount = 0;
     this.failcount = 0;
+    this.totalvisits = 0;
     this.yield = yield;
 
     this.sex = 0;
+    this.totalsex = 0;
     this.asex = 0;
     this.slept = 0;
 }
 
 
 GatheringSite.prototype.day = function () {
-    this.count = 0;
+    this.totalvisits += this.feedcount;
+    this.feedcount = 0;
     this.failcount = 0;
+    this.totalsex += this.sex;
+    this.sex = 0;
+    this.asex = 0;
+    this.slept = 0;
 }
 
 GatheringSite.prototype.cost = function (perm) {
@@ -871,7 +824,7 @@ GatheringSite.prototype.cost = function (perm) {
 }
 
 GatheringSite.prototype.gather = function (perm) {
-    if(this.count++ < this.yield*this.reward)
+    if (this.feedcount++ < this.yield * this.reward)
         return { cost: this.perm.compare(perm), reward: this.reward };
     return { cost: this.perm.compare(perm), reward: 0, fail: this.failcount++ };
 }
@@ -880,7 +833,10 @@ GatheringSite.prototype.gather = function (perm) {
 
 var SiteMap = function (params) {
     this.params = params;
+    this.thresholds = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     this.sitelist = [];
+    this.totalsex = [];
+    this.totalvisited = [];
     this.adjacencymatrix = [];
     this.visited = [];
     for (var i = 0; i < this.params.numsites; i++) {
@@ -896,7 +852,7 @@ var SiteMap = function (params) {
 
     for (var i = 0; i < this.params.numsites; i++) {
         var type = Math.floor(Math.random() * 2) == 0 ? "FISH" : "NUTS";
-        var reward = Math.floor(Math.random() * this.params.rewardmax + 1);
+        var reward = this.params.rewardmin + Math.floor(Math.random() * (this.params.rewardmax - this.params.rewardmin + 1));
         var x = Math.random();
         var y = Math.random();
         this.sitelist.push(new GatheringSite(this.params.permsize, reward, this.params.yield, type, i, x, y));
@@ -909,7 +865,9 @@ var SiteMap = function (params) {
     }
 }
 
-SiteMap.prototype.day = function() {
+SiteMap.prototype.day = function () {
+//  console.log(this.thresholds);
+    this.thresholds = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     this.visited = [];
     for (var i = 0; i < this.params.numsites; i++) {
         this.visited.push([]);
@@ -917,6 +875,37 @@ SiteMap.prototype.day = function() {
         for (var j = 0; j < this.params.numsites; j++) {
             vrow.push(0);
         }
+        this.sitelist[i].day();
+    }
+
+    this.totalsex = [];
+    var temp = [];
+    for (var i = 0; i < this.params.numsites; i++) {
+        temp.push(this.params.map.sitelist[i].totalsex);
+    }
+
+    for (var i = 0; i < this.params.numsites; i++) {
+        var mindex = 0;
+        for (var j = 0; j < temp.length; j++) {
+            if (temp[j] > temp[mindex]) mindex = j;
+        }
+        this.totalsex.push(temp[mindex]);
+        temp.splice(mindex, 1);
+    }
+
+    this.totalvisited = [];
+    temp = [];
+    for (var i = 0; i < this.params.numsites; i++) {
+        temp.push(this.params.map.sitelist[i].totalvisits);
+    }
+
+    for (var i = 0; i < this.params.numsites; i++) {
+        var mindex = 0;
+        for (var j = 0; j < temp.length; j++) {
+            if (temp[j] > temp[mindex]) mindex = j;
+        }
+        this.totalvisited.push(temp[mindex]);
+        temp.splice(mindex, 1);
     }
 }
 
@@ -925,7 +914,7 @@ var Gene = function (site, perm, params) {
     this.site = site;
     this.params = params;
     this.perm = perm;
-    this.breed = 0;
+    this.breed = Math.random() < this.params.mutationrate ? 0.1 : 0;
 }
 
 Gene.prototype.cost = function () {
@@ -940,10 +929,8 @@ Gene.prototype.reward = function () {
 
 Gene.prototype.mutate = function () {
     if (this.perm != null) this.perm.mutate();
-    if (Math.random() > this.params.mutationrate) {
-        if (Math.random() > 0.5 || this.breed === 0) this.breed += 0.1;
-        else this.breed -= 0.1;
-    }
+    if (Math.random() > 0.5 || this.breed === 0) this.breed += 0.1;
+    else this.breed -= 0.1;
 }
 
 Gene.prototype.clone = function () {
@@ -956,16 +943,21 @@ var Geneplex = function (params) {
     this.params = params;
     this.genes = [];
     this.breedsites = [];
+    this.rewind = false;
+    this.gene = -1;
+    this.maxthreshold = 2;
+
     for (var i = 0; i < this.params.numsites; i++) {
+        if (Math.random() < this.params.mutationrate) this.breedsites.push(0.1);
         this.breedsites.push(0);
     }
 
     var length = 0;
-    var gene = new Gene(this.params.map.sitelist[Math.floor(Math.random()*this.params.map.sitelist.length)],new Perm(this.params.permsize), this.params);
+    var gene = new Gene(this.params.map.sitelist[Math.floor(Math.random() * this.params.map.sitelist.length)], new Perm(this.params.permsize), this.params);
     length += gene.cost();
     this.genes.push(gene);
 
-    while (length < params.maxenergy*4) {
+    while (length < params.maxenergy * 4) {
         var adj = [];
         for (var i = 0; i < params.map.sitelist.length; i++) {
             if (params.map.adjacencymatrix[gene.site.index][i] !== 0) adj.push(i);
@@ -975,22 +967,29 @@ var Geneplex = function (params) {
         length += gene.cost();
         this.genes.push(gene);
     }
+
+    this.updateStats();
+    //console.log(Math.floor(this.length*100)/100 + " " + this.resources + " " + Math.floor(this.resourcesRatio*100)/100);
 }
 
-Geneplex.prototype.mutate = function (){
+Geneplex.prototype.mutate = function () {
     // mutate random genes in the list
+    if (Math.random() < this.params.mutationrate) {
+        if (Math.random() < 0.5 || this.maxthreshold <= 2) this.maxthreshold++;
+        else this.maxthreshold--;
+    }
+
     var num = this.genes.length * this.params.mutationrate;
     for (var i = 0; i < num; i++) {
         var index = Math.floor(Math.random() * this.genes.length);
         this.genes[index].mutate();
     }
 
-    num = this.params.numsites * this.params.mutationrate;
-
-    for (var i = 0; i < num; i++) {
-        var index = Math.floor(Math.random() * this.breedsites.length);
-        if (Math.random() > 0.5 || this.breedsites[index] === 0) this.breedsites[index] += 0.1;
-        else this.breedsites[index] -= 0.1;
+    for (var i = 0; i < this.params.numsites; i++) {
+        if (Math.random() < this.params.mutationrate) {
+            if (Math.random() > 0.5 || this.breedsites[i] === 0) this.breedsites[i] += 0.1;
+            else this.breedsites[i] -= 0.1;
+        }
     }
 
     if (Math.random() < this.params.mutationrate) {
@@ -1001,7 +1000,7 @@ Geneplex.prototype.mutate = function (){
         var gindex = [];
         var start = -1;
         var end = -1;
-        for (var i = Math.floor(Math.random()*this.genes.length); i < this.genes.length; i++) {
+        for (var i = Math.floor(Math.random() * this.genes.length) ; i < this.genes.length; i++) {
             start = indexof(sites, this.genes[i].site.index);
             //console.log(start);
             if (start === -1) {
@@ -1097,8 +1096,12 @@ Geneplex.prototype.mutate = function (){
                 this.genes.push(gene);
             }
         }
+        this.updateStats();
+
         return true;
     }
+    this.updateStats();
+
     return false;
 }
 
@@ -1106,16 +1109,16 @@ Geneplex.prototype.lcs = function (geneplex) {
     var s = [];
     var n = this.genes.length;
     var m = geneplex.genes.length;
-    for (var i = 0; i < n+1; i++) {
+    for (var i = 0; i < n + 1; i++) {
         s.push([]);
-        for (var j = 0; j < m+1; j++) {
+        for (var j = 0; j < m + 1; j++) {
             s[i].push(0);
         }
     }
 
-    for (var i = 1; i < n+1; i++) {
-        for (var j = 1; j < m+1; j++) {
-            if (this.genes[i-1].site.index === geneplex.genes[j-1].site.index) {
+    for (var i = 1; i < n + 1; i++) {
+        for (var j = 1; j < m + 1; j++) {
+            if (this.genes[i - 1].site.index === geneplex.genes[j - 1].site.index) {
                 s[i][j] = s[i - 1][j - 1] + 1;
             }
             else {
@@ -1126,9 +1129,9 @@ Geneplex.prototype.lcs = function (geneplex) {
     var that = this;
     function recover(i, j) {
         if (i < 1 || j < 1) return [];
-        if (that.genes[i-1].site.index === geneplex.genes[j-1].site.index) {
+        if (that.genes[i - 1].site.index === geneplex.genes[j - 1].site.index) {
             var list = recover(i - 1, j - 1);
-            list.push({ i: i-1, j: j-1 });
+            list.push({ i: i - 1, j: j - 1 });
             return list;
         }
         else {
@@ -1147,7 +1150,7 @@ Geneplex.prototype.lcs = function (geneplex) {
         }
     }
 
-    return { max: s[n][m], list: recover(n,m) };
+    return { max: s[n][m], list: recover(n, m) };
 }
 
 Geneplex.prototype.crossover = function (geneplex) {
@@ -1159,6 +1162,10 @@ Geneplex.prototype.crossover = function (geneplex) {
     var mother = Math.random() > 0.5 ? true : false;
     var i = 0;
     var j = 0;
+
+    if (!mother) this.maxthreshold = geneplex.maxthreshold;
+
+    mother = Math.random() > 0.5 ? true : false;
     for (var k = 0; k < crosspoints.list.length; k++) {
         if (mother) {
             while (i < crosspoints.list[k].i) {
@@ -1196,6 +1203,8 @@ Geneplex.prototype.crossover = function (geneplex) {
         }
     }
 
+    this.updateStats();
+
     return toReturn;
 }
 
@@ -1208,110 +1217,187 @@ Geneplex.prototype.clone = function () {
     for (var i = 0; i < this.params.numsites; i++) {
         gp.breedsites[i] = this.breedsites[i];
     }
-    return gp;
-}
+    gp.maxthreshold = this.maxthreshold;
 
-Geneplex.prototype.reverse = function () {
-    var gp;
-    gp.genes = [];
-    for (var i = 0; i < this.genes.length; i++) {
-        gp.genes.push(this.genes[this.genes.length - 1 - i]);
-    }
-    this.genes = gp.genes;
+    gp.updateStats();
+
+    return gp;
 }
 
 Geneplex.prototype.findBestDay = function (currentSite, energy, breeding) {
     var counts = [];
     var bestday = { index: -1, reward: -1 };
+    
+    if (energy < 0) return bestday;
+    var maximizing = false;
+    if (this.params.maximize && this.params.continue) {
+        var threshold = 1 / this.maxthreshold;
+        if (this.maxthreshold < this.params.map.thresholds.length) this.params.map.thresholds[this.maxthreshold-1]++;
+        if (Math.random() < threshold) maximizing = true;
+    }
+    //console.log("find best day");
 
-    var rewind = false;
-    for (var i = 0; i >= 0; rewind ? i-- : i++) {
-        if (i === this.genes.length) {
-            if (i === 0||i===1) { console.log("panic!"); break; }
-            i -= 2;
-            rewind = true;
-        }
-        // if we have counts on the go
-        if (counts.length > 0) {
+    // continue following genome from current site
+    if (this.gene > -1 && this.params.continue && !maximizing) {
+        //        console.log("continue from " + this.gene);
+        bestday = {
+            index: this.gene,
+            intervals: [],
+            indexlist: [],
+            energy: 0,
+            reward: 0,
+            rewind: this.rewind,
+            last: this.gene
+        };
+        var duration = 0;
+        for (var i = this.gene; duration < energy; this.rewind ? i-- : i++) {
             var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
-            var edgecost = this.params.map.adjacencymatrix[this.genes[rewind ? i + 1 : i - 1].site.index][this.genes[i].site.index];
+            if (this.rewind && (i + 2) > this.genes.length || !this.rewind && i - 1 < 0) {
+                console.log(i + " " + this.genes.length + " " + this.rewind);
+                this.rewind = !this.rewind;
+            }
+            if (this.genes.length < 5) {
+                console.log("veryshort " + this.genes.length);
+            }
+            if (this.genes[i] === undefined || this.genes[this.rewind ? i + 1 : i - 1] === undefined) {
+                console.log("undefined " + i + " " + this.genes + " " + this.genes[i] + " " + this.genes[this.rewind ? i + 1 : i - 1]);
+            }
+            var edgecost = this.params.map.adjacencymatrix[this.genes[this.rewind ? i + 1 : i - 1].site.index][this.genes[i].site.index];
             var cost = this.genes[i].cost() + edgecost + breedcost;
-            
-            for (var j = 0; j < counts.length; j++) {
-                if (counts[j].energy + cost <= energy) {
-                    counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
-                    counts[j].energy += cost;
-                    counts[j].reward += this.genes[i].reward();
-                    if (breedcost > 0) {
-                        counts[j].intervals.push({ start: counts[j].energy - breedcost, end: counts[j].energy, site: this.genes[i].site.index });
-                    }
+            if (duration + cost < energy) {
+                bestday.indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: bestday.energy });
+                bestday.energy += cost;
+                bestday.reward += this.genes[i].reward();
+                if (breedcost > 0) {
+                    bestday.intervals.push({ start: bestday.energy - breedcost, end: bestday.energy, site: this.genes[i].site.index });
                 }
-                else {
-                    //console.log(counts[j]);
-                    if (bestday.reward < counts[j].reward) {
-                        counts[j].last = i - 1;
-                        counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy + 1 });
-                        bestday = counts[j];
-                    }
-                    if (bestday.reward === counts[j].reward && bestday.energy > counts[j].energy) {
-                        counts[j].last = i - 1;
-                        counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy + 1 });
-                        bestday = counts[j];
-                    }
-                    counts.splice(j--, 1);
+                bestday.last = i;
+
+
+                if (i === this.genes.length - 1) {
+                    this.rewind = true;
+                }
+                if (i === 0) {
+                    this.rewind = false;
                 }
             }
+            duration += cost;
         }
-        // if we are at the current site start a count
-        if (currentSite === this.genes[i].site.index) {
-            var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
-            counts.push({
-                index: i,
-                intervals: breedcost === 0 ? [] : [{ start: this.genes[i].cost(), end: this.genes[i].cost() +  breedcost, site: this.genes[i].site.index }],
-                indexlist: [{ geneindex: i, index: this.genes[i].site.index, start: 0 }],
-                energy: this.genes[i].cost() + breedcost,
-                reward: this.genes[i].reward(),
-                rewind: rewind
-            });
-        }
+        //console.log(bestday.last);
+        bestday.indexlist.push({ geneindex: bestday.last, index: this.genes[bestday.last].site.index, start: this.params.maxenergy * 2 });
+        bestday.rewind = this.rewind;
     }
-    // if there are more counts to finish
-    rewind = false;
-    for (var i = 1; counts.length > 0 && i < this.genes.length; i++) {
-        // if we have counts on the go
-        //if (i >= this.genes.length) console.log("i: " + i + "length: " + this.genes.length);
-        if (counts.length > 0) {
-            var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
-            var edgecost = this.params.map.adjacencymatrix[this.genes[rewind ? i + 1 : i - 1].site.index][this.genes[i].site.index];
-            var cost = this.genes[i].cost() + edgecost + breedcost;
+    else {
+        //       console.log("maximizing");
+        this.rewind = false;
+        // find best possible segment of genplex that starts at the current site
+        for (var i = 0; i >= 0; this.rewind ? i-- : i++) {
+            if (i === this.genes.length) {
+                if (i === 0 || i === 1) { console.log("panic! " + i + " " + bestday.index); return bestday; }
+                i -= 2;
+                this.rewind = true;
+            }
+            // if we have counts on the go
+            if (counts.length > 0) {
+                var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
+                var edgecost = this.params.map.adjacencymatrix[this.genes[this.rewind ? i + 1 : i - 1].site.index][this.genes[i].site.index];
+                var cost = this.genes[i].cost() + edgecost + breedcost;
 
-            for (var j = 0; j < counts.length; j++) {
-                if (counts[j].energy + cost <= energy) {
-                    counts[j].indexlist.push({ geneindex: i,index: this.genes[i].site.index, start: counts[j].energy });
-                    counts[j].energy += cost;
-                    counts[j].reward += this.genes[i].reward();
-                    if (breedcost > 0) {
-                        counts[j].intervals.push({ start: counts[j].energy - breedcost, end: counts[j].energy, site: this.genes[i].site.index });
+                for (var j = 0; j < counts.length; j++) {
+                    if (counts[j].energy + cost <= energy) {
+                        counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                        counts[j].energy += cost;
+                        counts[j].reward += this.genes[i].reward();
+                        if (breedcost > 0) {
+                            counts[j].intervals.push({ start: counts[j].energy - breedcost, end: counts[j].energy, site: this.genes[i].site.index });
+                        }
+                    }
+                    else {
+                        //console.log(counts[j]);
+                        if (bestday.reward < counts[j].reward) {
+                            counts[j].last = i - 1;
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy *2 });
+                            bestday = counts[j];
+                        }
+                        if (bestday.reward === counts[j].reward && bestday.energy > counts[j].energy) {
+                            counts[j].last = i - 1;
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy * 2 });
+                            bestday = counts[j];
+                        }
+                        counts.splice(j--, 1);
                     }
                 }
-                else {
-                    //console.log(counts[j]);
-                    if (bestday.reward < counts[j].reward) {
-                        counts[j].last = i - 1;
-                        counts[j].indexlist.push({ geneindex: i,index: this.genes[i].site.index, start: this.params.maxenergy + 1 });
-                        bestday = counts[j];
+            }
+            // if we are at the current site start a count
+            if (currentSite === this.genes[i].site.index) {
+                var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
+                counts.push({
+                    index: i,
+                    intervals: breedcost === 0 ? [] : [{ start: this.genes[i].cost(), end: this.genes[i].cost() + breedcost, site: this.genes[i].site.index }],
+                    indexlist: [{ geneindex: i, index: this.genes[i].site.index, start: 0 }],
+                    energy: this.genes[i].cost() + breedcost,
+                    reward: this.genes[i].reward(),
+                    rewind: this.rewind
+                });
+            }
+        }
+        // if there are more counts to finish
+        this.rewind = false;
+        for (var i = 1; counts.length > 0 && i < this.genes.length; i++) {
+            // if we have counts on the go
+            //if (i >= this.genes.length) console.log("i: " + i + "length: " + this.genes.length);
+            if (counts.length > 0) {
+                var breedcost = breeding === true ? (this.genes[i].breed + this.breedsites[this.genes[i].site.index]) : 0;
+                var edgecost = this.params.map.adjacencymatrix[this.genes[this.rewind ? i + 1 : i - 1].site.index][this.genes[i].site.index];
+                var cost = this.genes[i].cost() + edgecost + breedcost;
+
+                for (var j = 0; j < counts.length; j++) {
+                    if (counts[j].energy + cost <= energy) {
+                        counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                        counts[j].energy += cost;
+                        counts[j].reward += this.genes[i].reward();
+                        if (breedcost > 0) {
+                            counts[j].intervals.push({ start: counts[j].energy - breedcost, end: counts[j].energy, site: this.genes[i].site.index });
+                        }
                     }
-                    if (bestday.reward === counts[j].reward && bestday.energy > counts[j].energy) {
-                        counts[j].last = i - 1;
-                        counts[j].indexlist.push({ geneindex: i,index: this.genes[i].site.index, start: this.params.maxenergy + 1 });
-                        bestday = counts[j];
+                    else {
+                        //console.log(counts[j]);
+                        if (bestday.reward < counts[j].reward) {
+                            counts[j].last = i - 1;
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy * 2 });
+                            bestday = counts[j];
+                        }
+                        if (bestday.reward === counts[j].reward && bestday.energy > counts[j].energy) {
+                            counts[j].last = i - 1;
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: counts[j].energy });
+                            counts[j].indexlist.push({ geneindex: i, index: this.genes[i].site.index, start: this.params.maxenergy * 2 });
+                            bestday = counts[j];
+                        }
+                        counts.splice(j--, 1);
                     }
-                    counts.splice(j--, 1);
                 }
             }
         }
     }
     var ints = 0;
+    this.gene = bestday.last;
+    this.rewind = bestday.rewind;
+    if (bestday.last === this.genes.length - 1) {
+        //console.log("end " + bestday.last + " " + this.genes.length + " " + bestday.rewind);
+        this.rewind = false;
+    }
+    if (bestday.last === 0) {
+        //console.log("front " + bestday.last + " " + this.genes.length + " " + bestday.rewind);
+        this.rewind = true;
+    }
+
+    if (energy < bestday.energy) {
+        //console.log("low energy " + bestday.energy + "/" + energy);
+        return { index: -1, reward: -1 };
+    }
     //if (bestday.intervals) {
     //    while (bestday.intervals.length > ints) {
     //        console.log("(" + bestday.intervals[ints].start + ", " + bestday.intervals[ints].end + ", " + bestday.intervals[ints].site + ")");
@@ -1326,24 +1412,37 @@ Geneplex.prototype.findBestDay = function (currentSite, energy, breeding) {
     //    }
     //    console.log(cycle);
     //}
+
+    //console.log(bestday);
+
     return bestday;
 }
 
-Geneplex.prototype.length = function () {
+Geneplex.prototype.updateStats = function () {
+    this.length = this.getLength();
+    this.resources = this.getResources();
+    this.resourcesRatio = this.resources / this.length;
+}
+
+
+Geneplex.prototype.getLength = function () {
     var length = 0;
     for (var i = 0; i < this.genes.length; i++) {
         length += this.genes[i].cost();
+        length += this.genes[i].breed + this.breedsites[this.genes[i].site.index];
+        if (i + 1 < this.genes.length) length += this.params.map.adjacencymatrix[this.genes[i + 1].site.index][this.genes[i].site.index];
     }
+    this.length = length;
     return length;
 }
 
-Geneplex.prototype.fitness = function () {
-    var fitness = 0;
+Geneplex.prototype.getResources = function () {
+    var resources = 0;
     for (var i = 0; i < this.genes.length; i++) {
-        fitness += this.genes[i].reward();
+        resources += this.genes[i].reward();
     }
-    //fitness += (50 - this.length())*0.01;
-    return fitness;
+    this.resources = resources;
+    return resources;
 }
 
 var Genome = function (params) {
@@ -1354,14 +1453,16 @@ var Genome = function (params) {
     this.sexual = this.params.sexual;
 }
 
-Genome.prototype.mutate = function() {
+Genome.prototype.mutate = function () {
     if (Math.random() < this.params.mutationrate) {
         Math.random() > 0.5 ? this.asexual++ : this.asexual--;
-        this.asexual = this.asexual < this.params.maxenergy / 4 ? this.params.maxenergy / 4 : this.asexual;
+        this.asexual = this.asexual < this.params.maxenergy ? this.params.maxenergy : this.asexual;
+        if (this.asexual === undefined) console.log(this.asexual);
     }
     if (Math.random() < this.params.mutationrate) {
         Math.random() > 0.5 ? this.sexual++ : this.sexual--;
-        this.sexual = this.sexual < 0 ? 0 : this.sexual;
+        this.sexual = this.sexual < this.params.maxenergy / 2 ? this.params.maxenergy / 2 : this.sexual;
+        if (this.sexual === undefined) console.log(this.sexual);
     }
     return this.geneplex.mutate();
 }
@@ -1379,7 +1480,7 @@ Genome.prototype.crossover = function (genome) {
     return related;
 }
 
-Genome.prototype.clone = function() {
+Genome.prototype.clone = function () {
     var g = new Genome(this.params);
 
     g.geneplex = this.geneplex.clone();
@@ -1389,7 +1490,7 @@ Genome.prototype.clone = function() {
     return g;
 }
 
-function Agent(params) {
+function Agent(params, id) {
     this.params = params;
     this.energy = this.params.maxenergy;
     this.genome = new Genome(this.params);
@@ -1408,6 +1509,11 @@ function Agent(params) {
     this.mutated = false;
     this.breeding = false;
     this.parentrelated = -1;
+
+    //console.log(id);
+    this.id = id;
+    this.mates = [];
+    this.children = [];
 }
 
 Agent.prototype.day = function () {
@@ -1433,22 +1539,23 @@ Agent.prototype.day = function () {
         this.breeding = true;
     else this.breeding = false;
 
-    this.bestday = this.genome.geneplex.findBestDay(this.site, Math.min(this.energy,this.params.maxenergy), this.breeding);
+    this.bestday = this.genome.geneplex.findBestDay(this.site, Math.min(this.energy, this.params.maxenergy), this.breeding || true);
     this.resources = 0;
     this.lastindex = 0;
 }
 
 Agent.prototype.update = function () {
     var i = 0;
-    var delay = (this.params.maxenergy - this.bestday.energy)/2;
+    var delay = (this.params.maxenergy - this.bestday.energy) / 2;
 
     if (this.bestday.index !== -1) {
+//        console.log(this.elapsed);
         while (this.elapsed > this.bestday.indexlist[i++].start + delay);
         i--;
         if (i > this.lastindex) {
             for (var j = this.lastindex; j < i; j++) {
                 var index = this.bestday.indexlist[j].index;
-                var lastindex = j === 0 ? index : this.bestday.indexlist[j-1].index;
+                var lastindex = j === 0 ? index : this.bestday.indexlist[j - 1].index;
                 this.params.map.visited[lastindex][index]++;
                 this.params.map.visited[index][lastindex]++;
                 var gene = this.genome.geneplex.genes[this.bestday.indexlist[j].geneindex];
@@ -1471,18 +1578,18 @@ Agent.prototype.crossover = function (agent) {
     //console.log(this.parentrelated);
 }
 
-Agent.prototype.clone = function () {
-    var a = new Agent(this.params);
+Agent.prototype.clone = function (id) {
+    var a = new Agent(this.params, id);
     a.genome = this.genome.clone();
     a.site = this.site;
     a.gen = this.gen;
     return a;
 }
 
-Agent.prototype.asex = function () {
+Agent.prototype.asex = function (id) {
     this.births++;
     this.params.map.sitelist[this.site].asex++;
-    var newagent = this.clone();
+    var newagent = this.clone(id);
 
     newagent.mutate();
     newagent.gen++;
@@ -1491,16 +1598,18 @@ Agent.prototype.asex = function () {
     this.energy -= this.params.maxenergy;
     this.breeding = false;
 
+    this.children.push(newagent.parentrelated);
+
     return newagent;
 }
 
-Agent.prototype.sex = function (father) {
+Agent.prototype.sex = function (father, id) {
     var mother = this;
 
     mother.sexbirths++;
     father.sexbirths++;
 
-    var newagent = mother.clone();
+    var newagent = mother.clone(id);
     newagent.crossover(father);
     newagent.gen = Math.max(mother.gen, father.gen) + 1;
     newagent.lovechild = true;
@@ -1508,6 +1617,12 @@ Agent.prototype.sex = function (father) {
 
     mother.energy -= this.params.maxenergy / 2;
     father.energy -= this.params.maxenergy / 2;
+
+    mother.mates.push(father.id);
+    father.mates.push(mother.id);
+
+    mother.children.push(newagent.parentrelated);
+    father.children.push(newagent.parentrelated);
 
     mother.breeding = false;
     father.breeding = false;
@@ -1537,9 +1652,10 @@ function Population(params) {
     this.ages = [];
     this.parents = [];
     this.related = [];
+    this.partners = [0,0,0,0,0,0,0,0,0,0,0,0];
 
     for (var i = 0; i < this.params.numagent; i++) {
-        var a = new Agent(this.params);
+        var a = new Agent(this.params, this.births++);
         this.agents.push(a);
     }
 
@@ -1564,7 +1680,7 @@ function Population(params) {
 
 Population.prototype.day = function () {
     this.days++;
-    this.elapsed -= this.params.maxenergy;
+    this.elapsed = 0;
     this.dayasex = 0;
     this.daysex = 0;
     this.slept = 0;
@@ -1576,59 +1692,76 @@ Population.prototype.day = function () {
     var allIntervals = new IntervalList();
 
     for (var i = 0; i < this.params.map.sitelist.length; i++) {
-        this.params.map.sitelist[i].slept = 0;
+        var site = this.params.map.sitelist[i];
+        if (site.feedcount > 0) this.harvest++;
+        if (site.feedcount > site.yield * site.reward) this.overharvest++;
         sites.push([]);
-        this.params.map.sitelist[i].sex = 0;
-        this.params.map.sitelist[i].asex = 0;
     }
+    this.params.map.day();
 
     this.gen = { max: 0, min: this.days, average: 0 };
     this.age = { max: 0, min: this.days, average: 0 };
     this.energy = { max: 0, min: 4 * this.params.maxenergy, average: 0 };
-    this.ages = [];
-    for (var i = 0; i < 200; i++) this.ages.push(0);
+    this.lengths = { max: 0, min: 2000000, average: 0 };
+    this.ratio = { max: 0, min: 2000000, average: 0 };
     this.resources = { max: 0, min: 4 * this.params.maxenergy, average: 0 };
     for (var i = 0; i < this.agents.length; i++) {
         var agent = this.agents[i];
-        agent.day();
 
-        this.ages[agent.age-1]++;
-        this.params.map.sitelist[agent.site].slept++;
-        this.gen.max = Math.max(this.gen.max, agent.gen);
-        this.gen.min = Math.min(this.gen.min, agent.gen);
-        this.gen.average += agent.gen / this.agents.length;
-        this.age.max = Math.max(this.age.max, agent.age);
-        this.age.min = Math.min(this.age.min, agent.age);
-        this.age.average += agent.age / this.agents.length;
-        this.energy.max = Math.max(this.energy.max, agent.energy);
-        this.energy.min = Math.min(this.energy.min, agent.energy);
-        this.energy.average += agent.energy / this.agents.length;
-        this.resources.max = Math.max(this.resources.max, agent.resources);
-        this.resources.min = Math.min(this.resources.min, agent.resources);
-        this.resources.average += agent.resources / this.agents.length;
-
-        if (agent.breeding) {
-            var ints = agent.bestday.intervals;
-            sites[agent.site].push(agent);
-
-            for (var j = 0; j < ints.length; j++) {
-                var interval = ints[j];
-                interval.agent = i;
-
-                allIntervals.insert(interval);
-            }
-        }
-
-        if (agent.energy < 0 || agent.bestday.index === -1) {
+        if (agent.energy < 0 || agent.bestday && agent.bestday.index === -1) {
             this.deaths++;
             agent.dead = true;
             // agent dead
+
+            //var m = [];
+            //if (agent.mates !== 0) {
+            //    for(var j = 0; j < agent.mates.length; j++) {
+            //        if(m.indexOf(agent.mates[j]) < 0) m.push(agent.mates[j]);
+            //    }
+            //    console.log(agent.mates.length - m.length);
+            //}
+
             //console.log("DEATH\tage: " + agent.age + "\tbirths: " + agent.births + "\tgen: " + agent.gen + "\tlength: "
             //+ agent.genome.geneplex.genes.length);
             this.agents.splice(i, 1);
             //this.related.splice(i, 1);
             //for (var j = 0; j < this.related.length; j++) this.related[j].splice(i, 1);
             i--;
+        }
+        else {
+
+            agent.day();
+
+            this.params.map.sitelist[agent.site].slept++;
+            this.gen.max = Math.max(this.gen.max, agent.gen);
+            this.gen.min = Math.min(this.gen.min, agent.gen);
+            this.gen.average += agent.gen / this.agents.length;
+            this.age.max = Math.max(this.age.max, agent.age);
+            this.age.min = Math.min(this.age.min, agent.age);
+            this.age.average += agent.age / this.agents.length;
+            this.energy.max = Math.max(this.energy.max, agent.energy);
+            this.energy.min = Math.min(this.energy.min, agent.energy);
+            this.energy.average += agent.energy / this.agents.length;
+            this.resources.max = Math.max(this.resources.max, agent.resources);
+            this.resources.min = Math.min(this.resources.min, agent.resources);
+            this.resources.average += agent.resources / this.agents.length;
+            this.lengths.max = Math.max(this.lengths.max, agent.genome.geneplex.length);
+            this.lengths.min = Math.min(this.lengths.min, agent.genome.geneplex.length);
+            this.lengths.average += agent.genome.geneplex.length / this.agents.length;
+            this.ratio.max = Math.max(this.ratio.max, agent.genome.geneplex.resourcesRatio);
+            this.ratio.min = Math.min(this.ratio.min, agent.genome.geneplex.resourcesRatio);
+            this.ratio.average += agent.genome.geneplex.resourcesRatio / this.agents.length;
+            if (agent.breeding) {
+                var ints = agent.bestday.intervals;
+                sites[agent.site].push(agent);
+                if (ints === undefined) console.log(agent.bestday +  " " + agent.energy);
+                for (var j = 0; j < ints.length; j++) {
+                    var interval = ints[j];
+                    interval.agent = i;
+
+                    allIntervals.insert(interval);
+                }
+            }
         }
     }
 
@@ -1638,13 +1771,17 @@ Population.prototype.day = function () {
         if (agent.breeding && this.params.sexualon && agent.energy > agent.genome.sexual + this.params.maxenergy) {
             var partners = allIntervals.findNextOverlap(i);
             var j = 0;
+            //if(partners.length > 0) console.log(partners);
             while (j < partners.length) {
                 var other = this.agents[partners[j]];
                 if (other.breeding && other.energy > other.genome.sexual + this.params.maxenergy) {
+                    while (partners.length > this.partners.length + 1) this.partners.push(0);
+                    this.partners[partners.length - 1]++;
+
                     this.params.map.sitelist[interval.site].sex++;
                     this.sexbirths++;
 
-                    var newagent = agent.sex(other);
+                    var newagent = agent.sex(other, this.births + this.sexbirths);
 
                     while (this.parents.length < Math.min(100, newagent.parentrelated + 1)) this.parents.push(0);
                     this.parents[Math.min(100, newagent.parentrelated)]++;
@@ -1700,7 +1837,7 @@ Population.prototype.day = function () {
             //console.log("ASEX\tsite: " + agent.site + "\tenergy: " + Math.floor(agent.energy) +
             //"\tasexual: " + agent.genome.asexual + "\tsexual: " + agent.genome.sexual);
             this.births++;
-            var newagent = agent.asex();
+            var newagent = agent.asex(this.births + this.sexbirths);
 
             //this.related.push([]);
             //for (var k = 0; k < this.agents.length; k++) {
@@ -1716,26 +1853,18 @@ Population.prototype.day = function () {
             this.agents.push(newagent);
         }
     }
-
-
+    
     for (var i = 0; i < this.params.map.sitelist.length; i++) {
         var site = this.params.map.sitelist[i];
-
-        if (site.count > 0) this.harvest++;
-        if (site.count > site.yield * site.reward) this.overharvest++;
         if (site.slept > 0) this.slept++;
         if (site.sex > 0) this.daysex++;
         if (site.asex > 0) this.dayasex++;
-
-
-        site.day();
     }
-    this.params.map.day();
 }
 
 Population.prototype.update = function () {
     var speed = document.getElementById('speed').value;
-    this.elapsed += this.params.engine.clockTick*speed;
+    this.elapsed += this.params.engine.clockTick * speed;
     if (this.elapsed > this.params.maxenergy) this.newday = true;
 
     if (this.newday) {
@@ -1778,18 +1907,21 @@ ASSET_MANAGER.downloadAll(function () {
         fnn.sexual = parseInt(document.getElementById('sexual').value);
         fnn.asexualon = document.getElementById('asexualon').checked;
         fnn.sexualon = document.getElementById('sexualon').checked;
-        fnn.resourcefactor = parseInt(document.getElementById('resourcefactor').value);
+        fnn.maximize = document.getElementById('maximize').checked;
+        fnn.continue = document.getElementById('continue').checked;
+        fnn.resourcefactor = parseFloat(document.getElementById('resourcefactor').value);
         fnn.restcost = parseFloat(document.getElementById('restcost').value);
         fnn.agecost = parseFloat(document.getElementById('agecost').value);
-        fnn.clusters = document.getElementById('clusters').checked;
+        //fnn.clusters = document.getElementById('clusters').checked;
         fnn.permsize = parseInt(document.getElementById('permsize').value);
+        fnn.rewardmin = parseInt(document.getElementById('rewardmin').value);
         fnn.rewardmax = parseInt(document.getElementById('rewardmax').value);
         fnn.numsites = parseInt(document.getElementById('numsites').value);
         fnn.reach = parseFloat(document.getElementById('reach').value);
         fnn.yield = parseInt(document.getElementById('yield').value);
         fnn.mutationlength = parseInt(document.getElementById('mutationlength').value);
         fnn.mutationrate = parseFloat(document.getElementById('mutationrate').value);
-        fnn.clusterthreshold = parseFloat(document.getElementById('clusterthreshold').value);
+        //fnn.clusterthreshold = parseFloat(document.getElementById('clusterthreshold').value);
         fnn.pause = false;
         fnn.map = new SiteMap(fnn);
         console.log(fnn);
@@ -1802,7 +1934,7 @@ ASSET_MANAGER.downloadAll(function () {
 
     startNewSim();
 
-   
+
     play.onclick = function () {
         if (!simStart) {
             gameEngine.init(ctx);
