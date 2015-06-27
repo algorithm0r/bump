@@ -5,10 +5,15 @@
     <meta charset="utf-8">
     <title>Bumping and Grinding</title>
     <link type="text/css" rel="stylesheet" href="./style.css">
-    <script type="text/javascript" src="http://76.28.150.193:8888/socket.io/socket.io.js"></script>
+<!--    <script type="text/javascript" src="http://76.28.150.193:8888/socket.io/socket.io.js"></script> -->
     <script type="text/javascript" src="./assetmanager.js"></script>
     <script type="text/javascript" src="./gameengine.js"></script>
     <script type="text/javascript" src="./renderer.js"></script>
+    <script type="text/javascript" src="./utilities.js"></script>
+    <script type="text/javascript" src="./sitemap.js"></script>
+    <script type="text/javascript" src="./geneplex.js"></script>
+    <script type="text/javascript" src="./stochasticagent.js"></script>
+    <script type="text/javascript" src="./agent.js"></script>
     <script type="text/javascript" src="./fishnut.js"></script>
 </head>
 <body>
@@ -39,8 +44,9 @@
         <input type="text" id="mutationrate" value="0.05" />Mutation Rate<br />
         <input type="checkbox" id="asexualon" checked=true />Asexual <br />
         <input type="checkbox" id="sexualon" checked=true />Sexual <br />
-        <input type="checkbox" id="maximize" checked=true />Maximize Day<br />
-        <input type="checkbox" id="continue" />Continue Day<br />
+        <input type="radio" name="genome" id="genome_path" value="path" checked=true />Path Genome<br />
+        <input type="radio" name="genome" id="genome_stochastic" value="stochastic"/>Stochastic Genome<br />
+        <input type="text" id="noise" value="1" />Noise (1 low 10 high)<br />
         <div class="button" id="restart">New</div>
     </div><br />
     <div id="Logging">

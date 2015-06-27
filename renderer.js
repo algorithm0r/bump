@@ -299,43 +299,43 @@ Renderer.prototype.drawAgent = function (ctx, agent, x, y, vert) {
     var geneplex = agent.genome.geneplex;
 
     //this.drawGeneplex(ctx, geneplex, x, y, 2, vert);
+    if (geneplex) {
+        ctx.beginPath();
+        ctx.fillStyle = "LightGrey";
+        ctx.strokeStyle = "DarkGrey";
+        var width = geneplex.length * scale / 2;
+        var height = 25;
+        ctx.rect(x + xoffset - 2, y + yoffset - 2, (vert ? height : width) + 4, (vert ? width : height) + 4);
+        ctx.fill();
+        ctx.stroke();
 
-    ctx.beginPath();
-    ctx.fillStyle = "LightGrey";
-    ctx.strokeStyle = "DarkGrey";
-    var width = geneplex.length * scale / 2;
-    var height = 25;
-    ctx.rect(x + xoffset - 2, y + yoffset - 2, (vert ? height : width) + 4, (vert ? width : height) + 4);
-    ctx.fill();
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = "Brown";
+        width = geneplex.resourcesRatio * scale * 100;
+        height = 4;
+        ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+        ctx.fill();
 
-    ctx.beginPath();
-    ctx.fillStyle = "Brown";
-    width = geneplex.resourcesRatio * scale * 100;
-    height = 4;
-    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
-    ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "Green";
+        var gathering = (geneplex.length - geneplex.breedlength - geneplex.travellength) / geneplex.length * 100 * scale;
+        vert ? yoffset += gathering : xoffset += gathering;
+        width = geneplex.breedlength / geneplex.length * scale * 100;
+        height = 4;
+        ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+        ctx.fill();
+        vert ? yoffset -= gathering : xoffset -= gathering;
 
-    ctx.beginPath();
-    ctx.fillStyle = "Green";
-    var gathering = (geneplex.length - geneplex.breedlength - geneplex.travellength) / geneplex.length * 100 * scale;
-    vert ? yoffset += gathering : xoffset += gathering;
-    width = geneplex.breedlength / geneplex.length * scale * 100;
-    height = 4;
-    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
-    ctx.fill();
-    vert ? yoffset -= gathering : xoffset -= gathering;
-
-    ctx.beginPath();
-    ctx.fillStyle = "DarkGray";
-    gathering += geneplex.breedlength / geneplex.length * 100 * scale;
-    vert ? yoffset += gathering : xoffset += gathering;
-    width = geneplex.travellength / geneplex.length * scale * 100;
-    height = 4;
-    ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
-    ctx.fill();
-    vert ? yoffset -= gathering : xoffset -= gathering;
-
+        ctx.beginPath();
+        ctx.fillStyle = "DarkGray";
+        gathering += geneplex.breedlength / geneplex.length * 100 * scale;
+        vert ? yoffset += gathering : xoffset += gathering;
+        width = geneplex.travellength / geneplex.length * scale * 100;
+        height = 4;
+        ctx.rect(x + xoffset, y + yoffset, vert ? height : width, vert ? width : height);
+        ctx.fill();
+        vert ? yoffset -= gathering : xoffset -= gathering;
+    }
 
     ctx.beginPath();
     ctx.strokeStyle = "Black";
@@ -488,7 +488,7 @@ Renderer.prototype.draw = function (ctx) {
     this.drawLogPlot(ctx, 980, 300, "Visited Sites", this.p.params.map.totalvisited, 4);
 
     for (var i = 0; i < Math.min(this.agents.length, 72) ; i++) {
-        this.agents[i].genome.geneplex.gene = this.agents[i].gene;
+        //this.agents[i].genome.geneplex.gene = this.agents[i].gene;
         var vert = true;
         var xoffset = 0;
         var yoffset = 0;
